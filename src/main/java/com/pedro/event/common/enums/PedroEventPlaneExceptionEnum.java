@@ -8,7 +8,11 @@ public enum PedroEventPlaneExceptionEnum {
     /**
      * 错误状态和信息枚举
      */
-    PEDRO_EVENT_PLANE_ERROR("0", "[pedroEventPlane]pedroEventPlane出现异常");
+    PEDRO_EVENT_PLANE_ERROR("0", "[pedroEventPlane]pedroEventPlane异常"),
+    /**
+     * 传入参数有误
+     */
+    PEDRO_EVENT_PLANE_ILLEGAL_ARGS_ERROR("1","[pedroEventPlane]pedroEventPlane初始参数异常");
 
     /**
      * 错误码
