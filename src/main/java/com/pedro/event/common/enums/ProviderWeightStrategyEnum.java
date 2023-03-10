@@ -6,7 +6,7 @@ package com.pedro.event.common.enums;
 public enum ProviderWeightStrategyEnum {
 
     /**
-     * 等待1s
+     * 等待1ns
      */
-    PARK_1S_STRATEGY
+    PARK_1NS_STRATEGY
 }

@@ -21,6 +21,7 @@ public class SingleRingBuffer<T> extends RingBuffer<T> {
     @Override
     public void publish(T message) {
 
+
     }
 
     @Override

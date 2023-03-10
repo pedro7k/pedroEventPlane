@@ -64,26 +64,26 @@ public abstract class RingBuffer<T> extends RingBufferField<T> {
      * 推送单个消息
      * @param message 消息
      */
-    protected abstract void publish(T message);
+    public abstract void publish(T message);
 
     /**
      * 消费单个消息
      * @return 消费结果
      */
-    protected abstract T consume();
+    public abstract T consume();
 
     /**
      * 尝试推送单个消息
      * @return 生产是否成功
      * @param message 消息
      */
-    protected abstract boolean tryPublish(T message);
+    public abstract boolean tryPublish(T message);
 
     /**
      * 尝试消费单个消息
      * @return 消费是否成功，若成功得到结果
      */
-    protected abstract Optional<T> tryConsume();
+    public abstract Optional<T> tryConsume();
 
     /**
      * @param messageFactory   空消息工厂
