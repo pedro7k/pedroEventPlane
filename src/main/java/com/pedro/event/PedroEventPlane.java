@@ -1,14 +1,13 @@
 package com.pedro.event;
 
-import com.pedro.event.common.enums.ConsumerWeightStrategyEnum;
+import com.pedro.event.common.enums.ConsumerWaitStrategyEnum;
 import com.pedro.event.common.enums.PedroEventPlaneExceptionEnum;
 import com.pedro.event.common.enums.ProviderTypeEnum;
-import com.pedro.event.common.enums.ProviderWeightStrategyEnum;
+import com.pedro.event.common.enums.ProviderWaitStrategyEnum;
 import com.pedro.event.common.exception.PedroEventPlaneException;
 import com.pedro.event.interfaces.Handler;
 import com.pedro.event.interfaces.MessageFactory;
 import com.pedro.event.ringBuffer.RingBuffer;
-import jdk.internal.org.objectweb.asm.Handle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,16 +42,6 @@ public class PedroEventPlane<T> {
     private final Handler<T> handler;
 
     /**
-     * 生产者等待策略
-     */
-    private final ProviderWeightStrategyEnum providerWeightStrategy;
-
-    /**
-     * 消费者等待策略
-     */
-    private final ConsumerWeightStrategyEnum consumerWeightStrategy;
-
-    /**
      * 构造器
      * executor               消费者执行器
      * messageFactory         消息工厂
@@ -71,11 +60,6 @@ public class PedroEventPlane<T> {
         private final ProviderTypeEnum providerType;
         private final Handler<T> handler;
 
-
-        // Optional parameters - initialized to default values
-        private final ProviderWeightStrategyEnum providerWeightStrategy = ProviderWeightStrategyEnum.PARK_1NS_STRATEGY;
-        private final ConsumerWeightStrategyEnum consumerWeightStrategy = ConsumerWeightStrategyEnum.PARK_1S_STRATEGY;
-
         // build method
         public PedroEventPlane<T> build() {
             return new PedroEventPlane<>(this);
@@ -85,12 +69,23 @@ public class PedroEventPlane<T> {
         public Builder(ExecutorService executor, MessageFactory<T> messageFactory, int size, ProviderTypeEnum providerType, Handler<T> handler) {
             this.executor = executor;
             if (size < 1 || Integer.bitCount(size) != 1) {
+                // size必须为正的2的幂
                 logger.warn("[pedroEventPlane]pedroEventPlane初始参数异常,size={}", size);
                 throw new PedroEventPlaneException(PedroEventPlaneExceptionEnum.PEDRO_EVENT_PLANE_ILLEGAL_ARGS_ERROR);
             }
             this.ringBuffer = RingBuffer.createRingBuffer(messageFactory, size, providerType);
             this.providerType = providerType;
             this.handler = handler;
+        }
+
+        public Builder<T> providerWeightStrategy(ProviderWaitStrategyEnum providerWaitStrategyEnum) {
+            this.ringBuffer.setProviderWaitStrategy(providerWaitStrategyEnum);
+            return this;
+        }
+
+        public Builder<T> consumerWeightStrategy(ConsumerWaitStrategyEnum consumerWeightStrategy) {
+            this.ringBuffer.setConsumerWaitStrategy(consumerWeightStrategy);
+            return this;
         }
     }
 
@@ -104,8 +99,6 @@ public class PedroEventPlane<T> {
         this.ringBuffer = builder.ringBuffer;
         this.providerType = builder.providerType;
         this.handler = builder.handler;
-        this.providerWeightStrategy = builder.providerWeightStrategy;
-        this.consumerWeightStrategy = builder.consumerWeightStrategy;
     }
 
     /**
@@ -121,7 +114,7 @@ public class PedroEventPlane<T> {
      * @param message 消息
      */
     public void sendMessage(T message) {
-        if (message == null){
+        if (message == null) {
             logger.warn("[pedroEventPlane]传入message为null");
             return;
         }

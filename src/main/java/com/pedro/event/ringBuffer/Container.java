@@ -38,7 +38,8 @@ public class Container<T> extends ContainerField<T> {
 
     /**
      * 构造器
-     * @param size buffer大小
+     *
+     * @param size           buffer大小
      * @param messageFactory 消息工厂
      */
     public Container(int size, MessageFactory<T> messageFactory) {
@@ -52,13 +53,25 @@ public class Container<T> extends ContainerField<T> {
     }
 
     /**
-     * 获取指定位置的对象
+     * 获取指定位置的对象 volatile
+     *
      * @param index 原下标
      * @return 对象
      */
-    public T getItem(int index) {
-        int bufferIndex = index & (size - 1);
+    public T getItem(long index) {
+        int bufferIndex = (int) (index & (size - 1));
         // volatile读
         return (T) U.getObjectVolatile(buffer, bufferIndex);
+    }
+
+    /**
+     * 在指定位置放置对象 volatile
+     *
+     * @param index 原下标
+     * @param item  对象
+     */
+    public void putItem(long index, T item) {
+        int bufferIndex = (int) (index & (size - 1));
+        U.putObjectVolatile(buffer, bufferIndex, item);
     }
 }

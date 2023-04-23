@@ -3,10 +3,10 @@ package com.pedro.event.common.enums;
 /**
  * 消费者等待策略枚举
  */
-public enum ConsumerWeightStrategyEnum {
+public enum ConsumerWaitStrategyEnum {
 
     /**
-     * 等待1s
+     * 等待1ns
      */
-    PARK_1S_STRATEGY
+    CONSUMER_PARK_1NS_STRATEGY
 }

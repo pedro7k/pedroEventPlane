@@ -1,22 +1,25 @@
 package com.pedro.event.ringBuffer;
 
+import com.pedro.event.common.enums.ConsumerWaitStrategyEnum;
 import com.pedro.event.common.enums.PedroEventPlaneExceptionEnum;
 import com.pedro.event.common.enums.ProviderTypeEnum;
+import com.pedro.event.common.enums.ProviderWaitStrategyEnum;
 import com.pedro.event.common.exception.PedroEventPlaneException;
 import com.pedro.event.interfaces.MessageFactory;
 import com.pedro.event.ringBuffer.impl.MultiRingBuffer;
 import com.pedro.event.ringBuffer.impl.SingleRingBuffer;
-import sun.plugin2.message.Message;
+import com.pedro.event.util.WaitStrategyUtil;
 
-import java.util.ArrayList;
 import java.util.Optional;
+import java.util.concurrent.locks.LockSupport;
 
 
 /**
  * 缓冲区属性，统一填充不会被更改的属性
+ *
  * @param <T> 消息类型
  */
-abstract class RingBufferField<T>{
+abstract class RingBufferField<T> {
 
     protected long p1, p2, p3, p4, p5, p6, p7;
 
@@ -51,36 +54,51 @@ public abstract class RingBuffer<T> extends RingBufferField<T> {
     protected Pointer readPointer = new Pointer();
 
     /**
+     * 生产者等待策略
+     */
+    private ProviderWaitStrategyEnum providerWaitStrategy = ProviderWaitStrategyEnum.PROVIDER_PARK_1NS_STRATEGY;
+
+    /**
+     * 消费者等待策略
+     */
+    private ConsumerWaitStrategyEnum consumerWaitStrategy = ConsumerWaitStrategyEnum.CONSUMER_PARK_1NS_STRATEGY;
+
+    /**
      * 父类构造器
-     * @param size buffer大小
+     *
+     * @param size           buffer大小
      * @param messageFactory 空消息工厂
      */
-    public RingBuffer(int size, MessageFactory<T> messageFactory){
+    public RingBuffer(int size, MessageFactory<T> messageFactory) {
         this.size = size;
         this.container = new Container<>(size, messageFactory);
     }
 
     /**
      * 推送单个消息
+     *
      * @param message 消息
      */
     public abstract void publish(T message);
 
     /**
      * 消费单个消息
+     *
      * @return 消费结果
      */
     public abstract T consume();
 
     /**
      * 尝试推送单个消息
-     * @return 生产是否成功
+     *
      * @param message 消息
+     * @return 生产是否成功
      */
     public abstract boolean tryPublish(T message);
 
     /**
      * 尝试消费单个消息
+     *
      * @return 消费是否成功，若成功得到结果
      */
     public abstract Optional<T> tryConsume();
@@ -102,4 +120,36 @@ public abstract class RingBuffer<T> extends RingBufferField<T> {
         throw new PedroEventPlaneException(PedroEventPlaneExceptionEnum.PEDRO_EVENT_PLANE_ERROR);
     }
 
+    /**
+     * 调用生产者等待
+     */
+    protected void waitForProvide() {
+        if (providerWaitStrategy == ProviderWaitStrategyEnum.PROVIDER_PARK_1NS_STRATEGY) {
+            // 等待1ns
+            WaitStrategyUtil.park1ns();
+        }
+    }
+
+    /**
+     * 调用消费者等待
+     */
+    protected void waitForConsume() {
+
+    }
+
+    public ProviderWaitStrategyEnum getProviderWaitStrategy() {
+        return providerWaitStrategy;
+    }
+
+    public void setProviderWaitStrategy(ProviderWaitStrategyEnum providerWaitStrategy) {
+        this.providerWaitStrategy = providerWaitStrategy;
+    }
+
+    public ConsumerWaitStrategyEnum getConsumerWaitStrategy() {
+        return consumerWaitStrategy;
+    }
+
+    public void setConsumerWaitStrategy(ConsumerWaitStrategyEnum consumerWaitStrategy) {
+        this.consumerWaitStrategy = consumerWaitStrategy;
+    }
 }

@@ -21,6 +21,14 @@ public class SingleRingBuffer<T> extends RingBuffer<T> {
     @Override
     public void publish(T message) {
 
+        do {
+            long current = writePointer.get();
+            if (writePointer.get() - size <= readPointer.get()) {
+                waitForProvide();
+            } else if (writePointer.compareAndSet(current, current + 1)) {
+                container.putItem(current, message);
+            }
+        } while (true);
 
     }
 
