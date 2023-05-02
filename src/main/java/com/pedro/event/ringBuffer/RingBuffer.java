@@ -134,7 +134,10 @@ public abstract class RingBuffer<T> extends RingBufferField<T> {
      * 调用消费者等待
      */
     protected void waitForConsume() {
-
+        if (consumerWaitStrategy == ConsumerWaitStrategyEnum.CONSUMER_PARK_1NS_STRATEGY) {
+            // 等待1ns
+            WaitStrategyUtil.park1ns();
+        }
     }
 
     public ProviderWaitStrategyEnum getProviderWaitStrategy() {
@@ -151,5 +154,13 @@ public abstract class RingBuffer<T> extends RingBufferField<T> {
 
     public void setConsumerWaitStrategy(ConsumerWaitStrategyEnum consumerWaitStrategy) {
         this.consumerWaitStrategy = consumerWaitStrategy;
+    }
+
+    public Container<T> getContainer() {
+        return container;
+    }
+
+    public void setContainer(Container<T> container) {
+        this.container = container;
     }
 }

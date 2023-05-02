@@ -129,8 +129,12 @@ public class PedroEventPlane<T> {
      * @return 推送是否成功
      */
     public boolean trySendMessage(T message) {
+        if (message == null) {
+            logger.warn("[pedroEventPlane]传入message为null");
+            return false;
+        }
 
-        return false;
+        return ringBuffer.tryPublish(message);
     }
 
     /**
