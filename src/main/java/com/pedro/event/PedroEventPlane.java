@@ -121,7 +121,7 @@ public class PedroEventPlane<T> {
         // 2.修改状态
         started = true;
 
-        // 3.
+        // 3.消费者启动
 
 
     }
@@ -132,6 +132,10 @@ public class PedroEventPlane<T> {
      * @param message 消息
      */
     public void sendMessage(T message) {
+        if (!started){
+            logger.error("[pedroEventPlane]队列未启动，不可操作");
+            throw new PedroEventPlaneException(PedroEventPlaneExceptionEnum.PEDRO_EVENT_PLANE_NOT_STARTED_ERROR);
+        }
         if (message == null) {
             logger.warn("[pedroEventPlane]传入message为null");
             return;
@@ -147,6 +151,10 @@ public class PedroEventPlane<T> {
      * @return 推送是否成功
      */
     public boolean trySendMessage(T message) {
+        if (!started){
+            logger.error("[pedroEventPlane]队列未启动，不可操作");
+            throw new PedroEventPlaneException(PedroEventPlaneExceptionEnum.PEDRO_EVENT_PLANE_NOT_STARTED_ERROR);
+        }
         if (message == null) {
             logger.warn("[pedroEventPlane]传入message为null");
             return false;
@@ -158,7 +166,7 @@ public class PedroEventPlane<T> {
     /**
      * 立即关闭队列
      */
-    public void shutdown() {
+    public void shutdownNow() {
 
     }
 

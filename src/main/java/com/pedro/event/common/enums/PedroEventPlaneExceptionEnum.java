@@ -12,7 +12,11 @@ public enum PedroEventPlaneExceptionEnum {
     /**
      * 传入参数有误
      */
-    PEDRO_EVENT_PLANE_ILLEGAL_ARGS_ERROR("1","[pedroEventPlane]pedroEventPlane初始参数异常");
+    PEDRO_EVENT_PLANE_ILLEGAL_ARGS_ERROR("1","[pedroEventPlane]pedroEventPlane初始参数异常"),
+    /**
+     * 队列未启动
+     */
+    PEDRO_EVENT_PLANE_NOT_STARTED_ERROR("2","[pedroEventPlane]pedroEventPlane队列未启动");
 
     /**
      * 错误码
