@@ -42,6 +42,12 @@ public class PedroEventPlane<T> {
     private final Handler<T> handler;
 
     /**
+     * 启动标识
+     */
+    private volatile boolean started = false;
+
+
+    /**
      * 构造器
      * executor               消费者执行器
      * messageFactory         消息工厂
@@ -106,6 +112,18 @@ public class PedroEventPlane<T> {
      */
     public void start() {
 
+        // 1.检测重复启动
+        if (started){
+            logger.error("[pedroEventPlane]在尝试一次pedroEventPlane重复启动");
+            return;
+        }
+
+        // 2.修改状态
+        started = true;
+
+        // 3.
+
+
     }
 
     /**
@@ -162,4 +180,10 @@ public class PedroEventPlane<T> {
         return "0";
     }
 
+    /**
+     * Getter of provider type
+     */
+    public ProviderTypeEnum getProviderType() {
+        return providerType;
+    }
 }

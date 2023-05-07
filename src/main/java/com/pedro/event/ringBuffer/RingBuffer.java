@@ -1,9 +1,6 @@
 package com.pedro.event.ringBuffer;
 
-import com.pedro.event.common.enums.ConsumerWaitStrategyEnum;
-import com.pedro.event.common.enums.PedroEventPlaneExceptionEnum;
-import com.pedro.event.common.enums.ProviderTypeEnum;
-import com.pedro.event.common.enums.ProviderWaitStrategyEnum;
+import com.pedro.event.common.enums.*;
 import com.pedro.event.common.exception.PedroEventPlaneException;
 import com.pedro.event.interfaces.MessageFactory;
 import com.pedro.event.ringBuffer.impl.MultiRingBuffer;
@@ -44,6 +41,11 @@ public abstract class RingBuffer<T> extends RingBufferField<T> {
     protected Container<T> container;
 
     /**
+     * 状态标识容器
+     */
+    protected Container<FieldStateEnum> fieldStateHolder;
+
+    /**
      * 写主指针
      */
     protected Pointer writePointer = new Pointer();
@@ -72,6 +74,7 @@ public abstract class RingBuffer<T> extends RingBufferField<T> {
     public RingBuffer(int size, MessageFactory<T> messageFactory) {
         this.size = size;
         this.container = new Container<>(size, messageFactory);
+        this.fieldStateHolder = new Container<>(size, () -> FieldStateEnum.NULL_FIELD);
     }
 
     /**

@@ -1,10 +1,12 @@
 package com.pedro.event.ringBuffer.impl;
 
+import com.pedro.event.common.enums.FieldStateEnum;
 import com.pedro.event.common.enums.ProviderTypeEnum;
 import com.pedro.event.interfaces.MessageFactory;
 import com.pedro.event.ringBuffer.Container;
 import com.pedro.event.ringBuffer.RingBuffer;
 
+import javax.swing.text.html.Option;
 import java.util.ArrayList;
 import java.util.Optional;
 
@@ -26,13 +28,22 @@ public class SingleRingBuffer<T> extends RingBuffer<T> {
             long currentRP = readPointer.get();
 
             // 2.尝试写
-            if (writePointer.get() - size >= currentRP) {
-                // 2.1 调用生产者等待
+            if (currentWP - size >= currentRP) {
+                // 2.1 写指针领先超过一圈，调用生产者等待
                 waitForProvide();
-            } else if (writePointer.compareAndSet(currentWP, currentWP + 1)) { // TODO cas和下一步操作之间的读写并发
-                // 2.2 写指针自增成功，向Container写对象
+            } else {
+                // 2.2 写指针自增成功，检查当前栅格状态，要求是空或已读
+                writePointer.setVolatile(currentWP + 1);
+                do {
+                    if (fieldStateHolder.getItem(currentWP) != FieldStateEnum.WRITTEN_FIELD) {
+                        // 避免覆盖掉未读的消息
+                        break;
+                    }
+                } while (true);
+                // 2.3 写对象
                 container.putItem(currentWP, message);
-                // TODO 2.3 更新flag
+                // 2.4 更新标识
+                fieldStateHolder.putItem(currentWP, FieldStateEnum.WRITTEN_FIELD);
                 return;
             }
         } while (true);
@@ -48,12 +59,21 @@ public class SingleRingBuffer<T> extends RingBuffer<T> {
 
             // 2.尝试读
             if (currentRP >= currentWP) {
-                // 2.1 调用消费者等待
+                // 2.1 读指针不落后于写指针，调用消费者等待
                 waitForConsume();
-            } else if (readPointer.compareAndSet(currentRP, currentRP + 1)) { // TODO cas和下一步操作之间的读写并发
-                // 2.2 读指针自增成功，从Container读对象
-                return container.getItem(currentRP);
-                // TODO 2.3 更新flag
+            } else if (readPointer.compareAndSet(currentRP, currentRP + 1)) {
+                // 2.2 读指针自增成功，检查当前栅格状态，要求是已写
+                do {
+                    if (fieldStateHolder.getItem(currentRP) == FieldStateEnum.WRITTEN_FIELD) {
+                        break;
+                    }
+                } while (true);
+                // 2.3 读对象
+                T message = container.getItem(currentRP);
+                // 2.4 更新标识
+                fieldStateHolder.putItem(currentRP, FieldStateEnum.READ_FIELD);
+                // 2.5 返回
+                return message;
             }
         } while (true);
     }
@@ -62,21 +82,55 @@ public class SingleRingBuffer<T> extends RingBuffer<T> {
     public boolean tryPublish(T message) {
         // 1.获取当前写指针
         long currentWP = writePointer.get();
-        if (writePointer.get() - size >= readPointer.get()) {
-            // 2.1 返回失败
+        long currentRP = readPointer.get();
+
+        // 2.尝试写
+        if (currentWP - size >= currentRP) {
+            // 2.1 写指针领先超过一圈，返回失败
             return false;
-        } else if (writePointer.compareAndSet(currentWP, currentWP + 1)) {
-            // 2.2 写指针自增成功，向Container写对象
+        } else {
+            // 2.2 检查当前栅格状态，要求是空或已读，再自增写指针
+            if (fieldStateHolder.getItem(currentWP) != FieldStateEnum.WRITTEN_FIELD) {
+                return false;
+            }
+            writePointer.setVolatile(currentWP + 1);
+            // 2.3 写对象
             container.putItem(currentWP, message);
-            return true;
+            // 2.4 更新标识
+            fieldStateHolder.putItem(currentWP, FieldStateEnum.WRITTEN_FIELD);
         }
 
-        // 3.返回失败
-        return false;
+        // 3.成功
+        return true;
     }
 
     @Override
     public Optional<T> tryConsume() {
+
+        // 1. 获取当前读指针
+        long currentWP = writePointer.get();
+        long currentRP = readPointer.get();
+
+        // 2.尝试读
+        if (currentRP >= currentWP) {
+            // 2.1 读指针不落后于写指针，调用消费者等待
+            return Optional.empty();
+        } else if (readPointer.compareAndSet(currentRP, currentRP + 1)) {
+            // 2.2 读指针自增成功，检查当前栅格状态，要求是已写
+            do {
+                if (fieldStateHolder.getItem(currentRP) == FieldStateEnum.WRITTEN_FIELD) {
+                    break;
+                }
+            } while (true);
+            // 2.3 读对象
+            T message = container.getItem(currentRP);
+            // 2.4 更新标识
+            fieldStateHolder.putItem(currentRP, FieldStateEnum.READ_FIELD);
+            // 2.5 返回
+            return Optional.of(message);
+        }
+
+        // 3.返回失败
         return Optional.empty();
     }
 }
