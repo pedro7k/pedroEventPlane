@@ -113,7 +113,7 @@ public class PedroEventPlane<T> {
     public void start() {
 
         // 1.检测重复启动
-        if (started){
+        if (started) {
             logger.error("[pedroEventPlane]在尝试一次pedroEventPlane重复启动");
             return;
         }
@@ -122,7 +122,21 @@ public class PedroEventPlane<T> {
         started = true;
 
         // 3.消费者启动
-
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // 不断向线程池提交任务，要求消费消息
+                while (true) {
+                    executor.submit(new Runnable() {
+                        @Override
+                        public void run() {
+                            T message = ringBuffer.consume();
+                            handler.handle(message);
+                        }
+                    });
+                }
+            }
+        }).start();
 
     }
 
@@ -132,7 +146,7 @@ public class PedroEventPlane<T> {
      * @param message 消息
      */
     public void sendMessage(T message) {
-        if (!started){
+        if (!started) {
             logger.error("[pedroEventPlane]队列未启动，不可操作");
             throw new PedroEventPlaneException(PedroEventPlaneExceptionEnum.PEDRO_EVENT_PLANE_NOT_STARTED_ERROR);
         }
@@ -151,7 +165,7 @@ public class PedroEventPlane<T> {
      * @return 推送是否成功
      */
     public boolean trySendMessage(T message) {
-        if (!started){
+        if (!started) {
             logger.error("[pedroEventPlane]队列未启动，不可操作");
             throw new PedroEventPlaneException(PedroEventPlaneExceptionEnum.PEDRO_EVENT_PLANE_NOT_STARTED_ERROR);
         }
