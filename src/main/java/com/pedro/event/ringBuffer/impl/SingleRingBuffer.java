@@ -1,10 +1,13 @@
 package com.pedro.event.ringBuffer.impl;
 
+import com.pedro.event.PedroEventPlane;
 import com.pedro.event.common.enums.FieldStateEnum;
 import com.pedro.event.common.enums.ProviderTypeEnum;
 import com.pedro.event.interfaces.MessageFactory;
 import com.pedro.event.ringBuffer.Container;
 import com.pedro.event.ringBuffer.RingBuffer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.text.html.Option;
 import java.util.ArrayList;
@@ -15,6 +18,8 @@ import java.util.Optional;
  * T 消息类型
  */
 public class SingleRingBuffer<T> extends RingBuffer<T> {
+
+    private static final Logger logger = LoggerFactory.getLogger(SingleRingBuffer.class);
 
     public SingleRingBuffer(int size, MessageFactory<T> messageFactory) {
         super(size, messageFactory);
@@ -31,19 +36,20 @@ public class SingleRingBuffer<T> extends RingBuffer<T> {
             if (currentWP - size >= currentRP) {
                 // 2.1 写指针领先超过一圈，调用生产者等待
                 waitForProvide();
+                logger.debug("[pedroEventPlane]publish，生产者等待");
             } else {
                 // 2.2 写指针自增成功，检查当前栅格状态，要求是空或已读
                 writePointer.setVolatile(currentWP + 1);
-                do {
-                    if (fieldStateHolder.getItem(currentWP) != FieldStateEnum.WRITTEN_FIELD) {
-                        // 避免覆盖掉未读的消息
-                        break;
-                    }
-                } while (true);
+                // 避免覆盖掉未读的消息
+                while (fieldStateHolder.getItem(currentWP) == FieldStateEnum.WRITTEN_FIELD) {
+                    waitForProvide();
+                    logger.debug("[pedroEventPlane]publish，生产者等待");
+                }
                 // 2.3 写对象
                 container.putItem(currentWP, message);
                 // 2.4 更新标识
                 fieldStateHolder.putItem(currentWP, FieldStateEnum.WRITTEN_FIELD);
+                logger.info("[pedroEventPlane]publish成功, 写指针值为{}", currentWP);
                 return;
             }
         } while (true);
@@ -61,17 +67,18 @@ public class SingleRingBuffer<T> extends RingBuffer<T> {
             if (currentRP >= currentWP) {
                 // 2.1 读指针不落后于写指针，调用消费者等待
                 waitForConsume();
+                logger.debug("[pedroEventPlane]publish，消费者等待");
             } else if (readPointer.compareAndSet(currentRP, currentRP + 1)) {
                 // 2.2 读指针自增成功，检查当前栅格状态，要求是已写
-                do {
-                    if (fieldStateHolder.getItem(currentRP) == FieldStateEnum.WRITTEN_FIELD) {
-                        break;
-                    }
-                } while (true);
+                while (fieldStateHolder.getItem(currentRP) != FieldStateEnum.WRITTEN_FIELD) {
+                    waitForConsume();
+                    logger.debug("[pedroEventPlane]publish，消费者等待");
+                }
                 // 2.3 读对象
                 T message = container.getItem(currentRP);
                 // 2.4 更新标识
                 fieldStateHolder.putItem(currentRP, FieldStateEnum.READ_FIELD);
+                logger.info("[pedroEventPlane]consume成功, 读指针值为{}", currentRP);
                 // 2.5 返回
                 return message;
             }
@@ -98,6 +105,7 @@ public class SingleRingBuffer<T> extends RingBuffer<T> {
             container.putItem(currentWP, message);
             // 2.4 更新标识
             fieldStateHolder.putItem(currentWP, FieldStateEnum.WRITTEN_FIELD);
+            logger.info("[pedroEventPlane]tryPublish成功, 写指针值为{}", currentWP);
         }
 
         // 3.成功
@@ -126,6 +134,7 @@ public class SingleRingBuffer<T> extends RingBuffer<T> {
             T message = container.getItem(currentRP);
             // 2.4 更新标识
             fieldStateHolder.putItem(currentRP, FieldStateEnum.READ_FIELD);
+            logger.info("[pedroEventPlane]tryConsume成功, 读指针值为{}", currentRP);
             // 2.5 返回
             return Optional.of(message);
         }
