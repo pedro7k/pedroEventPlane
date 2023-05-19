@@ -181,7 +181,7 @@ public class PedroEventPlane<T> {
      * 立即关闭队列
      */
     public void shutdownNow() {
-
+        started = false;
     }
 
     /**

@@ -30,7 +30,13 @@ class Consumer implements Handler<String> {
 
     @Override
     public void handle(String message) {
-        System.out.println("consume + " + message);
+        System.out.println("consume start + " + message);
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("consume end + " + message);
     }
 }
 
