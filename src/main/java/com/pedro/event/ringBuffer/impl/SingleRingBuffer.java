@@ -28,7 +28,7 @@ public class SingleRingBuffer<T> extends RingBuffer<T> {
     @Override
     public void publish(T message) {
         do {
-            // 1.获取当前写指针
+            // 1.获取当前读写指针
             long currentWP = writePointer.get();
             long currentRP = readPointer.get();
 
@@ -36,14 +36,14 @@ public class SingleRingBuffer<T> extends RingBuffer<T> {
             if (currentWP - size >= currentRP) {
                 // 2.1 写指针领先超过一圈，调用生产者等待
                 waitForProvide();
-                logger.debug("[pedroEventPlane]publish，生产者等待a | wp={},rp={},size={}", currentWP, currentRP, size);
+                // logger.debug("[pedroEventPlane]publish，生产者等待a | wp={},rp={},size={}", currentWP, currentRP, size);
             } else {
                 // 2.2 写指针自增成功，检查当前栅格状态，要求是空或已读
                 writePointer.setVolatile(currentWP + 1);
                 // 避免覆盖掉未读的消息
                 while (fieldStateHolder.getItem(currentWP) == FieldStateEnum.WRITTEN_FIELD) {
                     waitForProvide();
-                    logger.debug("[pedroEventPlane]publish，生产者等待b");
+                    // logger.debug("[pedroEventPlane]publish，生产者等待b");
                 }
                 // 2.3 写对象
                 container.putItem(currentWP, message);
@@ -67,12 +67,12 @@ public class SingleRingBuffer<T> extends RingBuffer<T> {
             if (currentRP >= currentWP) {
                 // 2.1 读指针不落后于写指针，调用消费者等待
                 waitForConsume();
-                logger.debug("[pedroEventPlane]consume，消费者等待a | wp={},rp={},size={}", currentWP, currentRP, size);
+                // logger.debug("[pedroEventPlane]consume，消费者等待a | wp={},rp={},size={}", currentWP, currentRP, size);
             } else if (readPointer.compareAndSet(currentRP, currentRP + 1)) {
                 // 2.2 读指针自增成功，检查当前栅格状态，要求是已写
                 while (fieldStateHolder.getItem(currentRP) != FieldStateEnum.WRITTEN_FIELD) {
                     waitForConsume();
-                    logger.debug("[pedroEventPlane]consume，消费者等待b");
+                    // logger.debug("[pedroEventPlane]consume，消费者等待b");
                 }
                 // 2.3 读对象
                 T message = container.getItem(currentRP);
@@ -121,7 +121,7 @@ public class SingleRingBuffer<T> extends RingBuffer<T> {
 
         // 2.尝试读
         if (currentRP >= currentWP) {
-            // 2.1 读指针不落后于写指针，调用消费者等待
+            // 2.1 读指针不落后于写指针，返回失败
             return Optional.empty();
         } else if (readPointer.compareAndSet(currentRP, currentRP + 1)) {
             // 2.2 读指针自增成功，检查当前栅格状态，要求是已写

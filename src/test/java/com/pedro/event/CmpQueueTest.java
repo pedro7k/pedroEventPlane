@@ -54,7 +54,7 @@ public class CmpQueueTest extends TestCase {
     public void testPlane() throws InterruptedException {
         // pedroEventPlane
         PedroEventPlane<String> plane = new PedroEventPlane
-                .Builder<String>(Executors.newFixedThreadPool(10), () -> "", 16, ProviderTypeEnum.SINGLE_PROVIDER, new Consumer())
+                .Builder<String>(Executors.newFixedThreadPool(10), () -> "", 16, ProviderTypeEnum.SINGLE_PROVIDER, new ConsumerA())
                 .providerWeightStrategy(ProviderWaitStrategyEnum.PROVIDER_PARK_1NS_STRATEGY)
                 .build();
 
